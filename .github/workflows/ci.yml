@@ -14,7 +14,7 @@ jobs:
 
     services:
       docker:
-        image: docker:latest  # Using the latest Docker version
+        image: docker:19.03.12
         options: --privileged
         ports:
           - 8080:8080
@@ -30,9 +30,9 @@ jobs:
       uses: actions/cache@v2
       with:
         path: /tmp/.buildx-cache
-        key: ${{ runner.os }}-buildx-${{ github.sha }}
+        key: $$${{ runner.os }}-buildx-${{ github.sha }}
         restore-keys: |
-          ${{ runner.os }}-buildx-
+          $$${{ runner.os }}-buildx-
 
     - name: Set up Docker Compose
       run: |
@@ -77,8 +77,6 @@ jobs:
     - name: Build Docker Image
       run: |
         docker-compose -f docker-compose.yml build
-        # If you need to specify a particular service to build:
-        # docker-compose build backend
 
     - name: Tag Docker Image
       run: |
@@ -87,3 +85,9 @@ jobs:
     - name: Push Docker Image to GHCR
       run: |
         docker push ghcr.io/cgsourav/frappe_image/custom:${{ github.sha }}
+
+    - name: Post-deployment checks
+      run: |
+        # Perform post-deployment checks if necessary
+        curl -s http://localhost:8080
+        echo "Post-deployment checks completed"
