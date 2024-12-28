@@ -1,4 +1,4 @@
-name: CI/CD Pipeline for Docker Compose
+name: CI/CD Pipeline for Docker Compose and GHCR Push
 
 on:
   push:
@@ -14,7 +14,7 @@ jobs:
 
     services:
       docker:
-        image: docker:19.03.12
+        image: docker:latest  # Using the latest Docker version
         options: --privileged
         ports:
           - 8080:8080
@@ -36,7 +36,7 @@ jobs:
 
     - name: Set up Docker Compose
       run: |
-        curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+        curl -L "https://github.com/docker/compose/releases/download/v2.18.1/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
         chmod +x /usr/local/bin/docker-compose
 
     - name: Build and start Docker Compose services
@@ -56,26 +56,34 @@ jobs:
       run: |
         docker-compose down
 
-  deploy:
+  push-image:
     runs-on: ubuntu-latest
     needs: build
     environment:
       name: production
       url: ${{ steps.deploy.outputs.deployment_url }}
-      
+
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Deploy to Production
-      run: |
-        echo "Deploying to production..."
-        docker-compose -f docker-compose.yml up -d
-        # Add any deployment steps (e.g., SSH, transfer files) here
-        echo "Deployed to production"
+    - name: Log in to GitHub Container Registry (GHCR)
+      uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Post-deployment checks
+    - name: Build Docker Image
       run: |
-        # Perform post-deployment checks if necessary
-        curl -s http://localhost:8080
-        echo "Post-deployment checks completed"
+        docker-compose -f docker-compose.yml build
+        # If you need to specify a particular service to build:
+        # docker-compose build backend
+
+    - name: Tag Docker Image
+      run: |
+        docker tag custom:latest ghcr.io/cgsourav/frappe_image/custom:${{ github.sha }}
+
+    - name: Push Docker Image to GHCR
+      run: |
+        docker push ghcr.io/cgsourav/frappe_image/custom:${{ github.sha }}
