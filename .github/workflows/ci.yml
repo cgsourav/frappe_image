@@ -61,7 +61,7 @@ jobs:
     needs: build
     environment:
       name: production
-      url: ${{ steps.deploy.outputs.deployment_url }}
+      url: $${{ steps.deploy.outputs.deployment_url }}  # Escaped $ symbol to avoid GitHub interpolation
 
     steps:
     - name: Checkout repository
